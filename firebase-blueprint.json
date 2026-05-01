@@ -24,6 +24,19 @@
         "addedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["productId", "addedAt"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "A user's purchase order",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "items": { "type": "array", "description": "List of cart items purchased" },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "processing", "shipped", "delivered", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "items", "totalAmount", "status", "createdAt"]
     }
   },
   "firestore": {
@@ -34,6 +47,10 @@
     "/users/{userId}/wishlist/{wishlistItemId}": {
       "schema": "WishlistItem",
       "description": "A wishlist item for a user"
+    },
+    "/users/{userId}/orders/{orderId}": {
+      "schema": "Order",
+      "description": "A user's purchase order"
     }
   }
 }
