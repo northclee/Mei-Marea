@@ -1,0 +1,56 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "An e-commerce jewelry product for the boutique",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The name of the item" },
+        "price": { "type": "number", "description": "Price in currency" },
+        "description": { "type": "string", "description": "Detailed item description" },
+        "images": { "type": "array", "description": "List of image URLs" },
+        "category": { "type": "string", "description": "Product category" },
+        "details": { "type": "array", "description": "Specific details (e.g. material, size)" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "price", "images"]
+    },
+    "WishlistItem": {
+      "title": "WishlistItem",
+      "description": "A product saved in a user's wishlist",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string" },
+        "addedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["productId", "addedAt"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "A user's purchase order",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "items": { "type": "array", "description": "List of cart items purchased" },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "processing", "shipped", "delivered", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "items", "totalAmount", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "The items available in the shop"
+    },
+    "/users/{userId}/wishlist/{wishlistItemId}": {
+      "schema": "WishlistItem",
+      "description": "A wishlist item for a user"
+    },
+    "/users/{userId}/orders/{orderId}": {
+      "schema": "Order",
+      "description": "A user's purchase order"
+    }
+  }
+}

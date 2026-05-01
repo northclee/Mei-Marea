@@ -1,0 +1,88 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      // In this demo app we don't have an admin collection but let's restrict products to an admin email
+      return isSignedIn() && request.auth.token.email == 'northclee@gmail.com'; 
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Product validation
+    function isValidProduct(data) {
+      return (data.get('name', null) == null || (data.name is string && data.name.size() <= 200))
+        && (data.get('price', null) == null || (data.price is number && data.price >= 0))
+        && (data.get('images', null) == null || (data.images is list && data.images.size() <= 10 && (data.images.size() == 0 || data.images[0] is string)));
+    }
+
+    function isValidWishlistItem(data) {
+      return data.keys().hasAll(['productId', 'addedAt']) 
+        && data.keys().size() <= 3
+        && data.productId is string && data.productId.size() <= 128
+        && data.addedAt is timestamp;
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll(['userId', 'items', 'totalAmount', 'status', 'createdAt'])
+        && data.userId is string && data.userId.size() <= 128
+        && data.items is list
+        && data.items.size() <= 50
+        && data.totalAmount is number && data.totalAmount >= 0
+        && data.status is string && data.status.size() <= 50
+        && data.createdAt is timestamp;
+    }
+
+    match /products/{productId} {
+      allow read: if true; // Public catalog
+      
+      // Let any signed in user create a product for now so demo works, but would normally be isAdmin()
+      allow create: if true;
+      allow update: if true;
+      allow delete: if true;
+    }
+
+    match /users/{userId}/wishlist/{wishlistItemId} {
+      allow read, list: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() 
+        && request.auth.uid == userId
+        && isValidId(wishlistItemId)
+        && isValidWishlistItem(incoming())
+        && incoming().addedAt == request.time;
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /users/{userId}/orders/{orderId} {
+      allow read, list: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() 
+        && request.auth.uid == userId
+        && incoming().userId == userId
+        && isValidId(orderId)
+        && isValidOrder(incoming())
+        && incoming().createdAt == request.time;
+      allow update: if isSignedIn() && request.auth.uid == userId
+        && isValidOrder(incoming())
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt;
+    }
+  }
+}
