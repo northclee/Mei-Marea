@@ -42,16 +42,6 @@ service cloud.firestore {
         && data.addedAt is timestamp;
     }
 
-    function isValidOrder(data) {
-      return data.keys().hasAll(['userId', 'items', 'totalAmount', 'status', 'createdAt'])
-        && data.userId is string && data.userId.size() <= 128
-        && data.items is list
-        && data.items.size() <= 50
-        && data.totalAmount is number && data.totalAmount >= 0
-        && data.status is string && data.status.size() <= 50
-        && data.createdAt is timestamp;
-    }
-
     match /products/{productId} {
       allow read: if true; // Public catalog
       
@@ -73,16 +63,7 @@ service cloud.firestore {
 
     match /users/{userId}/orders/{orderId} {
       allow read, list: if isSignedIn() && request.auth.uid == userId;
-      allow create: if isSignedIn() 
-        && request.auth.uid == userId
-        && incoming().userId == userId
-        && isValidId(orderId)
-        && isValidOrder(incoming())
-        && incoming().createdAt == request.time;
-      allow update: if isSignedIn() && request.auth.uid == userId
-        && isValidOrder(incoming())
-        && incoming().userId == existing().userId
-        && incoming().createdAt == existing().createdAt;
+      allow create: if isSignedIn() && request.auth.uid == userId;
     }
   }
 }

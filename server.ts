@@ -113,6 +113,108 @@ async function startServer() {
     }
   });
 
+  // API Route for User Email Sync
+  app.post("/api/sync-users", async (req, res) => {
+    try {
+      const { user } = req.body;
+      const sheetId = process.env.GOOGLE_SPREADSHEET_ID;
+      const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+      const privateKey = (process.env.GOOGLE_PRIVATE_KEY)?.replace(/\\n/g, '\n');
+
+      if (!sheetId || !clientEmail || !privateKey) {
+        return res.status(400).json({ error: "Missing Google Sheets credentials." });
+      }
+
+      const serviceAccountAuth = new JWT({
+        email: clientEmail,
+        key: privateKey,
+        scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+      });
+
+      const doc = new GoogleSpreadsheet(sheetId, serviceAccountAuth);
+      await doc.loadInfo();
+      
+      let sheet = doc.sheetsByTitle['Users'];
+      if (!sheet) {
+        sheet = await doc.addSheet({ 
+          title: 'Users', 
+          headerValues: ['UID', 'Email', 'DisplayName', 'Last Login'] 
+        });
+      }
+
+      const rows = await sheet.getRows();
+      const existingRow = rows.find(r => r.get('UID') === user.uid);
+      const now = new Date().toISOString();
+
+      if (existingRow) {
+        existingRow.assign({
+          Email: user.email,
+          DisplayName: user.displayName || '',
+          'Last Login': now
+        });
+        await existingRow.save();
+      } else {
+        await sheet.addRow({
+          UID: user.uid,
+          Email: user.email,
+          DisplayName: user.displayName || '',
+          'Last Login': now
+        });
+      }
+
+      res.json({ status: "success" });
+    } catch (error: any) {
+      console.error("User Sync Error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // API Route for Order Sync
+  app.post("/api/sync-orders", async (req, res) => {
+    try {
+      const { order } = req.body;
+      const sheetId = process.env.GOOGLE_SPREADSHEET_ID;
+      const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+      const privateKey = (process.env.GOOGLE_PRIVATE_KEY)?.replace(/\\n/g, '\n');
+
+      if (!sheetId || !clientEmail || !privateKey) {
+        return res.status(400).json({ error: "Missing Google Sheets credentials." });
+      }
+
+      const serviceAccountAuth = new JWT({
+        email: clientEmail,
+        key: privateKey,
+        scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+      });
+
+      const doc = new GoogleSpreadsheet(sheetId, serviceAccountAuth);
+      await doc.loadInfo();
+      
+      let sheet = doc.sheetsByTitle['Orders'];
+      if (!sheet) {
+        sheet = await doc.addSheet({ 
+          title: 'Orders', 
+          headerValues: ['OrderID', 'UserID', 'Email', 'TotalAmount', 'Status', 'Items', 'CreatedAt'] 
+        });
+      }
+
+      await sheet.addRow({
+        OrderID: order.id,
+        UserID: order.userId,
+        Email: order.email,
+        TotalAmount: order.totalAmount,
+        Status: order.status,
+        Items: JSON.stringify(order.items),
+        CreatedAt: order.createdAt
+      });
+
+      res.json({ status: "success" });
+    } catch (error: any) {
+      console.error("Order Sync Error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

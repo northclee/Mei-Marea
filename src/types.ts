@@ -15,3 +15,13 @@ export interface CartItem {
   product: Product;
   quantity: number;
 }
+
+export interface Order {
+  id?: string;
+  userId: string;
+  email: string;
+  totalAmount: number;
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  items: CartItem[];
+  createdAt: any;
+}

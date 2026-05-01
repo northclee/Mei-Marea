@@ -4,7 +4,7 @@
  */
 
 import { motion, AnimatePresence } from 'motion/react';
-import { Info, Camera, ShoppingBag, ChevronRight, Edit3, Check, X, ImageIcon, Sparkles, Loader2, Plus, ArrowLeft, Search, Heart, User as UserIcon, SlidersHorizontal, Database, Gem, ExternalLink, Menu, Crown, LogOut, Globe  } from 'lucide-react';
+import { ShoppingBag, ChevronRight, Edit3, Check, X, ImageIcon, Sparkles, Loader2, Plus, ArrowLeft, Search, Heart, User as UserIcon, SlidersHorizontal, Database } from 'lucide-react';
 import React, { useState, useEffect, createContext, useContext, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { BrowserRouter, Routes, Route, Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
@@ -12,7 +12,6 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
 import { getFirestore, collection, addDoc, getDocs, doc, getDoc, query, orderBy, limit, serverTimestamp, getDocFromServer, updateDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
-import UserDashboardPage from './UserDashboardPage';
 
 // --- FIREBASE INITIALIZATION ---
 const app = initializeApp(firebaseConfig);
@@ -85,8 +84,8 @@ const ADMIN_EMAIL = "northclee@gmail.com";
 import { Product, CartItem } from './types';
 import { productService } from './services/productService';
 
-const TideLogo = ({ size = 30, className = "" }: any) => (
-  <svg width={size} height={size} viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg" className={`mb-0 overflow-hidden opacity-80 ${className}`}>
+const TideLogo = () => (
+  <svg width="30" height="28" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg" className="mb-0 overflow-hidden opacity-80">
     <motion.path 
       d="M-48 24C-42 20 -30 28 -24 24C-18 20 -6 28 0 24C6 20 18 28 24 24C30 20 42 28 48 24C54 20 66 28 72 24" 
       stroke="#5a7a9a" 
@@ -121,6 +120,7 @@ interface CartContextType {
   addToCart: (product: Product) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
+  setCart: (cart: CartItem[]) => void;
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
 }
@@ -147,320 +147,6 @@ const useWishlist = () => {
 };
 
 
-
-const compressImage = (file: File, callback: (base64Str: string) => void) => {
-  if (file.type === 'image/svg+xml') {
-    const reader = new FileReader();
-    reader.onload = (e) => callback(e.target?.result as string);
-    reader.readAsDataURL(file);
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const img = new window.Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      let width = img.width;
-      let height = img.height;
-      const MAX_DIMENSION = 200;
-      if (width > height && width > MAX_DIMENSION) {
-        height = Math.round((height * MAX_DIMENSION) / width);
-        width = MAX_DIMENSION;
-      } else if (height > MAX_DIMENSION) {
-        width = Math.round((width * MAX_DIMENSION) / height);
-        height = MAX_DIMENSION;
-      }
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx?.drawImage(img, 0, 0, width, height);
-      callback(canvas.toDataURL('image/webp', 0.8));
-    };
-    img.src = e.target?.result as string;
-  };
-  reader.readAsDataURL(file);
-};
-
-// --- ICONS & COMPONENTS ---
-
-
-
-const UploadableIcon = ({ 
-  iconId, 
-  fallback: Fallback, 
-  size = 20, 
-  className = "", 
-  fill = "none", 
-  strokeWidth = 1.2, 
-  ...props 
-}: { 
-  iconId: string; 
-  fallback: any; 
-  size?: number; 
-  className?: string; 
-  fill?: string; 
-  strokeWidth?: number; 
-  [key: string]: any; 
-}) => {
-  const { config, updateField, isEditMode } = useEditor();
-  const inputId = React.useId();
-  const [showSeoEditor, setShowSeoEditor] = useState(false);
-
-  const currentSize = config?.theme?.iconSizes?.[iconId] || size;
-  const seoPath = `theme.icons.${iconId}`;
-  const currentAlt = (config.seo && getNestedValue(config.seo, seoPath)) || iconId;
-  const [tempAlt, setTempAlt] = useState(currentAlt);
-
-  useEffect(() => {
-    setTempAlt(currentAlt);
-  }, [currentAlt]);
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.stopPropagation();
-    const file = e.target.files?.[0];
-    if (file) {
-      compressImage(file, (base64String) => {
-        updateField(`theme.icons.${iconId}`, base64String);
-      });
-    }
-  };
-
-  const saveSeo = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    updateField(`seo.${seoPath}`, tempAlt);
-    setShowSeoEditor(false);
-  };
-
-  const hasImage = config?.theme?.icons?.[iconId];
-
-  const content = (
-    <div 
-      className={`${className} ${isEditMode ? 'cursor-pointer hover:ring-2 ring-blue-400 rounded-lg group/icon' : ''} inline-flex items-center justify-center relative`} 
-      title={isEditMode ? "" : currentAlt}
-      style={{ width: currentSize, height: currentSize }}
-      {...props}
-    >
-      {isEditMode && (
-        <input 
-          id={inputId}
-          type="file" 
-          onChange={handleImageUpload} 
-          className="hidden" 
-          accept="image/png, image/jpeg, image/gif, image/svg+xml"
-        />
-      )}
-      {hasImage ? (
-        <img src={hasImage} alt={currentAlt} title={currentAlt} className="w-full h-full object-contain" />
-      ) : (
-        <Fallback size={currentSize} className="w-full h-full" fill={fill} strokeWidth={strokeWidth} />
-      )}
-
-      {isEditMode && (
-        <>
-          <div className="absolute -top-4 -left-4 z-20 opacity-0 group-hover/icon:opacity-100 transition-opacity">
-            <button 
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSeoEditor(!showSeoEditor); }}
-              className="p-1 bg-white border border-black shadow-md rounded-full text-black hover:bg-black hover:text-white transition-transform scale-75 hover:scale-100"
-              title="SEO 설명 수정"
-            >
-              <Info size={12} />
-            </button>
-          </div>
-
-          <AnimatePresence>
-            {showSeoEditor && (
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="absolute top-full left-1/2 -translate-x-1/2 mt-4 w-[200px] bg-white border border-black p-3 z-[10000] shadow-xl"
-                onClick={e => e.stopPropagation()}
-              >
-                <p className="text-[9px] font-bold uppercase tracking-widest mb-2">HOVER 설명 수정</p>
-                <input 
-                  autoFocus
-                  type="text" 
-                  value={tempAlt}
-                  onChange={(e) => setTempAlt(e.target.value)}
-                  className="w-full text-[11px] border border-gray-200 p-2 mb-2 outline-none focus:border-black"
-                />
-                <button 
-                  onClick={saveSeo}
-                  className="w-full bg-black text-white text-[10px] font-bold py-2"
-                >
-                  적용
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <div 
-            className="absolute top-[80%] left-1/2 -translate-x-1/2 flex items-center gap-1 bg-black text-white rounded shadow-2xl p-1 z-[9999] pointer-events-auto opacity-0 invisible group-hover/icon:opacity-100 group-hover/icon:visible transition-all group-hover/icon:translate-y-2 cursor-default"
-            onClick={(e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); }}
-          >
-             <div 
-               onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateField(`theme.iconSizes.${iconId}`, Math.max(10, currentSize - 4)); }} 
-               className="w-6 h-6 flex items-center justify-center text-xs hover:bg-gray-800 rounded text-gray-300 cursor-pointer pointer-events-auto"
-             >-</div>
-             <span className="text-[10px] w-6 text-center">{currentSize}</span>
-             <div 
-               onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateField(`theme.iconSizes.${iconId}`, Math.min(200, currentSize + 4)); }} 
-               className="w-6 h-6 flex items-center justify-center text-xs hover:bg-gray-800 rounded text-gray-300 cursor-pointer pointer-events-auto"
-             >+</div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-
-  return isEditMode ? <div className="inline-block relative"><label htmlFor={inputId} className="cursor-pointer inline-block" onClick={e => e.stopPropagation()}>{content}</label></div> : content;
-};
-
-const KissMark = ({ size = 20, className = "", fill, ...props }: any) => {
-  const isFilled = fill && fill !== "none" && fill !== "transparent";
-  return (
-    <svg width={size} height={size} viewBox="0 0 100 100" className={className} style={{ transition: 'all 0.3s' }} xmlns="http://www.w3.org/2000/svg" {...props}>
-      <path d="M50 85 C30 85, 10 70, 10 50 C10 30, 30 20, 50 35 C70 20, 90 30, 90 50 C90 70, 70 85, 50 85 Z" fill={isFilled ? fill : "#ef4444"} />
-    </svg>
-  );
-};
-
-const MultipleBags = ({ size = 20, className = "", strokeWidth = 1, ...props }: any) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
-    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" opacity="0.6" />
-    <line x1="3" y1="6" x2="21" y2="6" opacity="0.6" />
-    <path d="M16 10a4 4 0 0 1-8 0" />
-  </svg>
-);
-
-const UploadableAvatar = ({ size = 20, className = "" }) => {
-  const { config, updateField, isEditMode } = useEditor();
-  const inputId = React.useId();
-  const [showSeoEditor, setShowSeoEditor] = useState(false);
-
-  const currentSize = config?.theme?.iconSizes?.['userAvatar'] || size;
-  const seoPath = 'theme.userAvatar';
-  const currentAlt = (config.seo && getNestedValue(config.seo, seoPath)) || 'User Profile';
-  const [tempAlt, setTempAlt] = useState(currentAlt);
-
-  useEffect(() => {
-    setTempAlt(currentAlt);
-  }, [currentAlt]);
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.stopPropagation();
-    const file = e.target.files?.[0];
-    if (file) {
-      compressImage(file, (base64String) => {
-        updateField('theme.userAvatar', base64String);
-      });
-    }
-  };
-
-  const saveSeo = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    updateField(`seo.${seoPath}`, tempAlt);
-    setShowSeoEditor(false);
-  };
-
-  const hasImage = config?.theme?.userAvatar;
-
-  const content = (
-    <div 
-      className={`${className} ${isEditMode ? 'cursor-pointer hover:ring-2 ring-blue-400 rounded-full group/icon' : ''} relative inline-flex justify-center items-center`} 
-      title={isEditMode ? "" : currentAlt}
-      style={{ width: currentSize, height: currentSize }}
-    >
-      {isEditMode && (
-        <input 
-          id={inputId}
-          type="file" 
-          onChange={handleImageUpload} 
-          className="hidden" 
-          accept="image/png, image/jpeg, image/gif"
-        />
-      )}
-      {hasImage ? (
-        <img src={hasImage} alt={currentAlt} title={currentAlt} className="w-full h-full object-cover rounded-full" />
-      ) : (
-        <AudreyIcon size={currentSize} className="w-full h-full" />
-      )}
-      
-      {isEditMode && (
-        <>
-          <div className="absolute -top-2 -right-2 z-20 opacity-0 group-hover/icon:opacity-100 transition-opacity">
-            <button 
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSeoEditor(!showSeoEditor); }}
-              className="p-1 bg-white border border-black shadow-md rounded-full text-black hover:bg-black hover:text-white transition-transform scale-75 hover:scale-100 font-bold"
-              title="SEO 설명 수정"
-            >
-              <Info size={12} />
-            </button>
-          </div>
-
-          <AnimatePresence>
-            {showSeoEditor && (
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="absolute top-full left-1/2 -translate-x-1/2 mt-4 w-[200px] bg-white border border-black p-3 z-[10000] shadow-xl"
-                onClick={e => e.stopPropagation()}
-              >
-                <p className="text-[9px] font-bold uppercase tracking-widest mb-2">HOVER 설명 수정</p>
-                <input 
-                  autoFocus
-                  type="text" 
-                  value={tempAlt}
-                  onChange={(e) => setTempAlt(e.target.value)}
-                  className="w-full text-[11px] border border-gray-200 p-2 mb-2 outline-none focus:border-black"
-                />
-                <button 
-                  onClick={saveSeo}
-                  className="w-full bg-black text-white text-[10px] font-bold py-2"
-                >
-                  적용
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <div 
-            className="absolute top-[80%] left-1/2 -translate-x-1/2 flex items-center gap-1 bg-black text-white rounded shadow-2xl p-1 z-[9999] pointer-events-auto opacity-0 invisible group-hover/icon:opacity-100 group-hover/icon:visible transition-all group-hover/icon:translate-y-2 cursor-default" 
-            onClick={(e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); }}
-          >
-             <div 
-               onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateField('theme.iconSizes.userAvatar', Math.max(10, currentSize - 4)); }} 
-               className="w-6 h-6 flex items-center justify-center text-xs hover:bg-gray-800 rounded text-gray-300 cursor-pointer pointer-events-auto"
-             >-</div>
-             <span className="text-[10px] w-6 text-center">{currentSize}</span>
-             <div 
-               onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateField('theme.iconSizes.userAvatar', Math.min(200, currentSize + 4)); }} 
-               className="w-6 h-6 flex items-center justify-center text-xs hover:bg-gray-800 rounded text-gray-300 cursor-pointer pointer-events-auto"
-             >+</div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-
-  return isEditMode ? <div className="inline-block relative"><label htmlFor={inputId} className="cursor-pointer inline-block" onClick={e => e.stopPropagation()}>{content}</label></div> : content;
-};
-
-const AudreyIcon = ({ className, size = 18 }: { className?: string, size?: number }) => (
-  <svg width={size} height={size} viewBox="-15 -15 130 130" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-    {/* Shoulders - white / very light gray */}
-    <path d="M 15 110 Q 50 70 85 110" stroke="#f0f0f0" strokeWidth="12" strokeLinecap="round" />
-    {/* Face - white circle - no border */}
-    <circle cx="50" cy="50" r="28" fill="#ffffff" />
-    {/* Minimal hair/head shape - light gray */}
-    <path d="M 25 45 C 25 15, 75 15, 75 45" stroke="#f5f5f5" strokeWidth="8" fill="none" />
-  </svg>
-);
-
-
 // --- CONTEXT FOR EDITOR ---
 interface EditorContextType {
   isEditMode: boolean;
@@ -470,15 +156,9 @@ interface EditorContextType {
   marqueeText: string;
   imageFilters: Record<string, string>;
   globalPhotoFilter: string;
-  config: typeof INITIAL_CONFIG_KR;
 }
 
 const EditorContext = createContext<EditorContextType | null>(null);
-
-const getNestedValue = (obj: any, path: string) => {
-  if (!obj || !path) return undefined;
-  return path.split('.').reduce((acc, part) => acc && acc[part], obj);
-};
 
 const useEditor = () => {
   const context = useContext(EditorContext);
@@ -498,7 +178,6 @@ interface EditableTextProps {
   field?: string;
 }
 
-
 const EditableText: React.FC<EditableTextProps> = ({ 
   path, 
   value, 
@@ -508,23 +187,13 @@ const EditableText: React.FC<EditableTextProps> = ({
   id,
   field
 }) => {
-  const { config, isEditMode, updateField, updateListItem } = useEditor();
+  const { isEditMode, updateField, updateListItem } = useEditor();
   const [showAI, setShowAI] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   
-  const seoPath = path ? `seo.${path}` : id ? `seo.${listPath}.${id}.${field}` : '';
-  const currentHoverTitle = seoPath && config.seo ? (getNestedValue(config.seo, seoPath.replace('seo.', '')) || value) : value;
-
-  const [tempAlt, setTempAlt] = useState(currentHoverTitle);
-  const [showSeoEditor, setShowSeoEditor] = useState(false);
-
-  useEffect(() => {
-    setTempAlt(currentHoverTitle);
-  }, [currentHoverTitle]);
-
-  if (!isEditMode) return <span className={className} title={currentHoverTitle || ""}>{value || ""}</span>;
+  if (!isEditMode) return <span className={className}>{value || ""}</span>;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (listPath && id && field) {
@@ -565,21 +234,12 @@ const EditableText: React.FC<EditableTextProps> = ({
     }
   };
 
-  const saveSeo = () => {
-    if (seoPath) {
-      updateField(seoPath, tempAlt);
-    }
-    setShowSeoEditor(false);
-  };
-
   return (
-    <div className="relative group/text w-full" ref={containerRef} onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+    <div className="relative group/text w-full" ref={containerRef}>
       {multiline ? (
         <textarea
           value={value || ""}
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
           onChange={handleChange}
-          title={showSeoEditor ? "" : currentHoverTitle}
           className={`${className} bg-gray-50 border-none outline-none w-full p-2 focus:ring-1 focus:ring-black rounded-none resize-none`}
           rows={Math.max(2, (value || "").split('\n').length)}
         />
@@ -587,60 +247,20 @@ const EditableText: React.FC<EditableTextProps> = ({
         <input
           type="text"
           value={value || ""}
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
           onChange={handleChange}
-          title={showSeoEditor ? "" : currentHoverTitle}
           className={`${className} bg-gray-50 border-none outline-none w-full p-1 focus:ring-1 focus:ring-black rounded-none`}
         />
       )}
       
-      <div className="absolute -top-3 -right-3 flex gap-1 z-20">
-        <button 
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSeoEditor(!showSeoEditor); setShowAI(false); }}
-          className="p-1.5 bg-white border border-black shadow-md rounded-full text-black hover:bg-black hover:text-white transition-transform hover:scale-110 active:scale-95"
-          title="SEO 설명(Hover 텍스트) 편집"
-        >
-          <Info size={14} />
-        </button>
-        <button 
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowAI(!showAI); setShowSeoEditor(false); }}
-          className="p-1.5 bg-white border border-black shadow-md rounded-full text-black hover:bg-black hover:text-white transition-transform hover:scale-110 active:scale-95"
-          title="AI로 문구 다듬기"
-        >
-          <Sparkles size={14} />
-        </button>
-      </div>
+      <button 
+        onClick={() => setShowAI(!showAI)}
+        className="absolute -top-3 -right-3 p-1.5 bg-white border border-black shadow-md rounded-full text-black hover:bg-black hover:text-white z-20 transition-transform hover:scale-110 active:scale-95"
+        title="AI로 문구 다듬기"
+      >
+        <Sparkles size={14} />
+      </button>
 
       <AnimatePresence>
-        {showSeoEditor && (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="absolute top-full left-0 mt-2 w-[240px] bg-white border border-black p-4 z-[60] shadow-xl"
-          >
-            <p className="text-[9px] font-bold uppercase tracking-[0.1em] mb-2 flex items-center justify-between gap-2">
-              <span className="flex items-center gap-1"><Info size={10} /> HOVER 설명(SEO) 수정</span>
-              <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSeoEditor(false); }} className="text-gray-400 hover:text-black transition-colors"><X size={10} /></button>
-            </p>
-            <input 
-              autoFocus
-              type="text" 
-              placeholder="마우스 오버 시 표시될 설명..."
-              value={tempAlt}
-              onChange={(e) => setTempAlt(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && saveSeo()}
-              className="w-full text-[11px] border border-gray-200 p-2 mb-3 outline-none focus:border-black"
-            />
-            <button 
-              onClick={saveSeo}
-              className="w-full bg-black text-white text-[10px] font-bold py-2 flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors"
-            >
-              적용
-            </button>
-          </motion.div>
-        )}
-        
         {showAI && (
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
@@ -648,26 +268,33 @@ const EditableText: React.FC<EditableTextProps> = ({
             exit={{ opacity: 0, y: 10 }}
             className="absolute top-full left-0 mt-2 w-[240px] bg-white border border-black p-4 z-[60] shadow-xl"
           >
-            <p className="text-[9px] font-bold uppercase tracking-[0.1em] mb-2 flex items-center justify-between gap-2">
-              <span className="flex items-center gap-1"><Sparkles size={10} /> AI 문구 에디터</span>
-              <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowAI(false); }} className="text-gray-400 hover:text-black transition-colors"><X size={10} /></button>
+            <p className="text-[9px] font-bold uppercase tracking-[0.1em] mb-2 flex items-center gap-2">
+              <Sparkles size={10} /> AI 문구 에디터
             </p>
             <input 
               autoFocus
               type="text" 
-              placeholder="예: 더 우아하게..."
+              placeholder="예: 더 우아하게, 짧게 요약해줘..."
               value={aiPrompt}
               onChange={(e) => setAiPrompt(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAIRefine()}
               className="w-full text-[11px] border border-gray-200 p-2 mb-3 outline-none focus:border-black"
             />
-            <button 
-              onClick={handleAIRefine}
-              disabled={isLoading}
-              className="w-full bg-black text-white text-[10px] font-bold py-2 flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors"
-            >
-              {isLoading ? <Loader2 size={12} className="animate-spin" /> : '적용'}
-            </button>
+            <div className="flex gap-2">
+              <button 
+                onClick={handleAIRefine}
+                disabled={isLoading}
+                className="flex-grow bg-black text-white text-[10px] font-bold py-2 flex items-center justify-center gap-2"
+              >
+                {isLoading ? <Loader2 size={12} className="animate-spin" /> : '적용'}
+              </button>
+              <button 
+                onClick={() => setShowAI(false)}
+                className="px-3 border border-gray-200 text-[10px]"
+              >
+                <X size={12} />
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -692,34 +319,23 @@ const EditableImage = ({
   id?: string;
   field?: string;
 }) => {
-  const { config, isEditMode, updateField, updateListItem, imageFilters, updateImageFilter, globalPhotoFilter } = useEditor();
+  const { isEditMode, updateField, updateListItem, imageFilters, updateImageFilter, globalPhotoFilter } = useEditor();
   const [isHovered, setIsHovered] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const [tempUrl, setTempUrl] = useState(src);
   const [tempFilter, setTempFilter] = useState(imageFilters[src] || '');
-
-  const seoPath = path ? `seo.${path}` : id ? `seo.${listPath}.${id}.${field}` : '';
-  const currentAlt = seoPath && config.seo ? (getNestedValue(config.seo, seoPath.replace('seo.', '')) || alt) : alt;
-  const [tempAlt, setTempAlt] = useState(currentAlt);
 
   useEffect(() => {
     setTempUrl(src);
     setTempFilter(imageFilters[src] || '');
-    setTempAlt(currentAlt);
-  }, [src, imageFilters, currentAlt]);
+  }, [src, imageFilters]);
 
   const handleSave = () => {
-    let finalUrl = tempUrl;
     if (listPath && id && field) {
-      updateListItem(listPath, id, field, finalUrl);
+      updateListItem(listPath, id, field, tempUrl);
     } else if (path) {
-      updateField(path, finalUrl);
+      updateField(path, tempUrl);
     }
-    updateImageFilter(finalUrl, tempFilter);
-    if (seoPath) {
-      updateField(seoPath, tempAlt);
-    }
-    setIsEditing(false);
+    updateImageFilter(src, tempFilter);
     setIsHovered(false);
   };
 
@@ -732,95 +348,60 @@ const EditableImage = ({
       onMouseLeave={() => isEditMode && setIsHovered(false)}
     >
       <img 
-        src={src || 'https://placehold.co/600x400/png?text=Image+Not+Found'} 
-        alt={currentAlt}
-        title={currentAlt}
+        src={src} 
+        alt={alt} 
         className={`${className} ${currentFilterClass}`} 
         referrerPolicy="no-referrer"
-        onError={(e) => {
-          (e.target as HTMLImageElement).src = 'https://placehold.co/600x400/png?text=Invalid+URL';
-        }}
       />
-      
-      {isEditMode && isHovered && !isEditing && (
-        <button 
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditing(true); }}
-          className="absolute inset-0 m-auto w-12 h-12 bg-black/50 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-50 hover:bg-black/80 backdrop-blur-sm shadow-xl"
-          title="이미지 수정"
-        >
-          <Camera size={20} />
-        </button>
-      )}
-
-      {isEditMode && isEditing && (
-        <div 
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white border border-gray-200 p-4 shadow-2xl z-[60] w-72 flex flex-col gap-3 rounded-lg"
-          onClick={e => e.stopPropagation()}
-        >
-          <div className="flex items-center justify-between border-b pb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-black">이미지 편집</span>
-            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditing(false); }} className="text-gray-400 hover:text-black transition-colors"><X size={14} /></button>
-          </div>
-          
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] text-gray-500 font-medium">IMAGE URL</label>
-            <input 
-              autoFocus
-              type="text" 
-              value={tempUrl} 
-              onChange={e => setTempUrl(e.target.value)}
-              className="text-xs border border-gray-200 p-2 w-full outline-none focus:border-black rounded bg-gray-50"
-              placeholder="https://..."
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] text-gray-500 font-medium">HOVER 제목 (SEO)</label>
-            <input 
-              type="text" 
-              value={tempAlt} 
-              onChange={e => setTempAlt(e.target.value)}
-              className="text-xs border border-gray-200 p-2 w-full outline-none focus:border-black rounded bg-gray-50"
-              placeholder="이미지 설명..."
-            />
-          </div>
-          
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] text-gray-500 font-medium pb-1 flex justify-between">
-              FILTER
-              <span className="text-[9px] text-gray-400">({tempFilter || globalPhotoFilter || 'None'})</span>
-            </label>
-            <div className="grid grid-cols-4 gap-1">
-              {[
-                { name: 'None', className: '' },
-                { name: 'Mono', className: 'grayscale' },
-                { name: 'Sepia', className: 'sepia' },
-                { name: 'Invert', className: 'invert' },
-                { name: 'Contrast', className: 'contrast-125' },
-                { name: 'Blur', className: 'blur-sm' },
-                { name: 'Bright', className: 'brightness-125' },
-                { name: 'Dark', className: 'brightness-75' }
-              ].map(f => (
-                <button
-                  key={f.name}
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setTempFilter(f.className); }}
-                  className={`text-[9px] py-1 border rounded transition-colors flex items-center justify-center
-                    ${tempFilter === f.className ? 'bg-black text-white border-black' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'}
-                  `}
-                  title={f.name}
-                >
-                  {f.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <button 
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSave(); }}
-            className="w-full bg-black text-white text-xs font-bold py-2.5 mt-1 rounded hover:bg-gray-900 transition-colors"
+      <AnimatePresence>
+        {isEditMode && isHovered && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center p-4 z-40 overflow-y-auto"
           >
-            적용
-          </button>
+            <div className="bg-white p-4 w-full max-w-sm flex flex-col gap-3">
+              <p className="text-[9px] font-bold tracking-[0.1em] text-gray-500 uppercase flex items-center gap-2">
+                <ImageIcon size={12} /> 이미지 필터 
+              </p>
+              {(path || listPath) && (
+                <input 
+                  type="text" 
+                  value={tempUrl} 
+                  onChange={(e) => setTempUrl(e.target.value)}
+                  className="text-[11px] border border-gray-200 p-2 outline-none focus:border-black w-full"
+                  placeholder="이미지 주소를 입력하세요"
+                />
+              )}
+              <select 
+                value={tempFilter}
+                onChange={(e) => setTempFilter(e.target.value)}
+                className="text-[11px] border border-gray-200 p-2 outline-none focus:border-black w-full bg-white"
+              >
+                <option value="">필터 없음 (None)</option>
+                <option value="retro-filter">Retro</option>
+                <option value="filter-kodachrome">Kodachrome</option>
+                <option value="filter-agfa-vista">Agfa Vista</option>
+                <option value="filter-agfa-ultra">Agfa Ultra</option>
+                <option value="filter-fuji-fortia">Fuji Fortia SP</option>
+                <option value="filter-analog-film">Analog Film</option>
+              </select>
+              <div className="flex gap-2">
+                <button onClick={handleSave} className="flex-grow bg-black text-white text-[10px] font-bold py-2 flex items-center justify-center gap-1">
+                  <Check size={12} /> 적용
+                </button>
+                <button onClick={() => { setTempUrl(src); setTempFilter(imageFilters[src]||''); setIsHovered(false); }} className="px-4 border border-gray-200 text-[10px] py-2">
+                  <X size={12} />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {isEditMode && (
+        <div className="absolute top-2 right-2 bg-black/50 text-white p-1 rounded-full pointer-events-none group-hover:hidden">
+          <ImageIcon size={14} />
         </div>
       )}
     </div>
@@ -828,8 +409,7 @@ const EditableImage = ({
 };
 
 // --- INITIAL CONFIGURATION ---
-const INITIAL_CONFIG_KR = {
-  seo: {},
+const INITIAL_CONFIG = {
   labels: {
     newSeason: '뉴 시즌',
     taxIncluded: '관세 포함',
@@ -884,7 +464,6 @@ const INITIAL_CONFIG_KR = {
   },
   brand: {
     name: 'MEI MAREA',
-    nameSize: { mobile: 10, tablet: 7, desktop: 3 },
     concept: '이탈리아 장인 주얼리 셀렉션 부티크',
     description: '장인 정신과 현대적 미학을 결합한 프리미엄 주얼리 브랜드',
     selectionBoutique: {
@@ -908,8 +487,6 @@ const INITIAL_CONFIG_KR = {
   },
   theme: {
     photoFilter: 'retro-filter',
-    userAvatar: '',
-    icons: {} as Record<string, string>,
     imageFilters: {} as Record<string, string>
   },
   curatedSeries: {
@@ -974,152 +551,6 @@ const INITIAL_CONFIG_KR = {
   }
 };
 
-const INITIAL_CONFIG_EN = {
-  seo: {},
-  labels: {
-    newSeason: 'NEW SEASON',
-    taxIncluded: 'TAX INCLUDED',
-    oneSize: 'ONE SIZE',
-    addToBag: 'ADD TO BAG',
-    wishlist: 'WISHLIST',
-    deliveryEstimate: 'ESTIMATED DELIVERY',
-    deliveryDates: 'MAY 7 - MAY 12',
-    freeReturnTitle: '30-DAY FREE RETURNS | EASY PICKUP FROM HOME',
-    descTitle: 'PRODUCT DESCRIPTION',
-    shippingTitle: 'SHIPPING & RETURNS',
-    shippingDesc: 'Complimentary return pickup service is provided for all orders.',
-    breadcrumbRoot: 'WOMEN',
-    shopTitle: 'JEWELRY',
-    allBrands: 'ALL BRANDS',
-    allCategories: 'ALL CATEGORIES',
-    backLink: 'BACK TO ACCESSORIES'
-  },
-  navMainMenu: [
-    {
-      id: 'women', label: 'WOMEN', subCategories: [
-        { id: 'w1', label: 'NEW ARRIVALS' },
-        { id: 'w2', label: 'VACATION' },
-        { id: 'w3', label: 'BRANDS' },
-        { id: 'w4', label: 'CLOTHING' },
-        { id: 'w5', label: 'SHOES' },
-        { id: 'w6', label: 'BAGS' },
-        { id: 'w7', label: 'ACCESSORIES' },
-        { id: 'w8', label: 'JEWELRY' },
-      ]
-    },
-    {
-       id: 'men', label: 'MEN', subCategories: [
-        { id: 'm1', label: 'NEW COLLECTION' },
-        { id: 'm2', label: 'BRANDS' },
-        { id: 'm3', label: 'CLOTHING' },
-        { id: 'm4', label: 'SHOES' },
-        { id: 'm5', label: 'BAGS' },
-        { id: 'm6', label: 'ACCESSORIES' },
-       ]
-    },
-    {
-       id: 'kids', label: 'KIDS', subCategories: [
-        { id: 'k1', label: 'GIRLS (2-12Y)' },
-        { id: 'k2', label: 'BOYS (2-12Y)' },
-        { id: 'k3', label: 'BABY (0-36M)' },
-       ]
-    }
-  ],
-  marquee: {
-    text: 'NEW COLLECTION OUT NOW — FREE WORLDWIDE SHIPPING ON ALL ORDERS OVER $500 — HANDCRAFTED IN ITALY'
-  },
-  brand: {
-    name: 'MEI MAREA',
-    nameSize: { mobile: 10, tablet: 7, desktop: 3 },
-    concept: 'Italian Artisan Jewelry Selection Boutique',
-    description: 'Premium jewelry brand combining craftsmanship and modern aesthetics',
-    selectionBoutique: {
-      title: 'SELECTION BOUTIQUE',
-      subtitle: 'The Essence of Italian Craftsmanship',
-      description: 'Mei Marea carefully curates the most original jewelry from historic workshops and modern artisans across Italy. We explore the intersection of traditional metalworking techniques and avant-garde design, aiming for value as a work of art beyond simple ornaments.',
-      image: 'https://images.unsplash.com/photo-1573333243148-5256e076633f?q=80&w=2072&auto=format&fit=crop'
-    }
-  },
-  navigation: [
-    { label: 'COLLECTIONS', href: '#' },
-    { label: 'ARTISANS', href: '#', active: true },
-    { label: 'EDITORIAL', href: '#' },
-    { label: 'ARCHIVE', href: '#' },
-  ],
-  hero: {
-    title: 'ARTISTIC\nMASTERY',
-    description: 'A silent conversation between hands and materials.\nA record of process, existence, and the aesthetics of ornamentation.',
-    cta: 'DISCOVER OUR ARTISANS',
-    image: 'https://images.unsplash.com/photo-1610492421943-88cc2974ab6e?q=80&w=2070&auto=format&fit=crop',
-  },
-  theme: {
-    photoFilter: 'retro-filter',
-    userAvatar: '',
-    icons: {} as Record<string, string>,
-    imageFilters: {} as Record<string, string>
-  },
-  curatedSeries: {
-    label: 'SERIES 01 — FORM',
-    title: 'Curated Products',
-    products: [
-      { id: 'eclipse', name: 'Eclipse Ring', material: 'STERLING SILVER', img: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?q=80&w=2070&auto=format&fit=crop' },
-      { id: 'void', name: 'Void Necklace', material: 'OXIDIZED SILVER', img: 'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?q=80&w=1974&auto=format&fit=crop' },
-      { id: 'fracture', name: 'Fracture Earrings', material: 'WHITE GOLD', img: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?q=80&w=1974&auto=format&fit=crop' },
-      { id: 'linear', name: 'Linear Bracelet', material: 'PLATINUM', img: 'https://images.unsplash.com/photo-1611085583191-a3b1aee33433?q=80&w=2070&auto=format&fit=crop' }
-    ]
-  },
-  profiles: {
-    label: 'VOL. 01 — FLORENCE',
-    title: 'ARCHIVE: SELECTED PROFILES',
-    viewCollectionLabel: 'VIEW COLLECTION',
-    primary: {
-      name: 'ELENA ROSSI',
-      role: 'MASTER SILVERSMITH',
-      bio: '"Master silversmith specializing in structural geometry. Her work redefines traditional techniques through the lens of brutalist architecture."',
-      image: 'https://images.unsplash.com/photo-1611095773767-114b53ef539f?q=80&w=2070&auto=format&fit=crop'
-    },
-    secondary: {
-      name: 'MATTEO BIANCHI',
-      bio: '"Focusing on the void. Bianchi\'s approach removes material until only the essential structure remains, creating pieces defined by negative space."',
-      image: 'https://images.unsplash.com/photo-1596464716127-f2a82984de30?q=80&w=2070&auto=format&fit=crop'
-    },
-    study: {
-      label: 'MATERIAL STUDY',
-      name: '001. RAW SILVER',
-      image: 'https://images.unsplash.com/photo-1626497746870-394200787593?q=80&w=1964&auto=format&fit=crop'
-    }
-  },
-  featured: {
-    title: 'Aesthetics of Ornament',
-    description: 'A study of form, shadow, and void.\nHighlighting the intersection of utilitarian design and sculptural jewelry.',
-    mainImage: 'https://images.unsplash.com/photo-1515562141207-7a88fb0ce33e?q=80&w=2070&auto=format&fit=crop',
-    mainLabel: 'FEATURED // OBLIVION CHOKER',
-    detail1: 'https://images.unsplash.com/photo-1630019017590-f024b6e0c0b4?q=80&w=1969&auto=format&fit=crop',
-    detail1Label: 'DETAIL / 01',
-    detail2: 'https://images.unsplash.com/photo-1543840922-38379ba4a29a?q=80&w=2070&auto=format&fit=crop',
-    detail2Label: 'DETAIL / 02'
-  },
-  archiveSeries: {
-    label: 'SERIES 02 — VOID',
-    title: 'Archive Products',
-    items: [
-      { id: 'tension', name: 'Tension Ring', detail: 'BRUSHED STEEL', img: 'https://images.unsplash.com/photo-1617038220319-276d3acb2824?q=80&w=1974&auto=format&fit=crop' },
-      { id: 'gravity', name: 'Gravity Pendant', detail: 'OBSIDIAN & SILVER', img: 'https://images.unsplash.com/photo-1589674781757-0a93182367ac?q=80&w=1965&auto=format&fit=crop' },
-      { id: 'monolith', name: 'Monolith Signet', detail: 'BLACKENED GOLD', img: 'https://images.unsplash.com/photo-1629193512534-110037a3c398?q=80&w=2070&auto=format&fit=crop' },
-      { id: 'industrial', name: 'Industrial Chain', detail: 'TITANIUM', img: 'https://images.unsplash.com/photo-1531995811006-35cb42e1a022?q=80&w=2070&auto=format&fit=crop' }
-    ]
-  },
-  footer: {
-    links: [
-      { label: 'Instagram', href: '#' },
-      { label: 'Journal', href: '#' },
-      { label: 'Privacy Policy', href: '#' },
-      { label: 'Contact Us', href: '#' }
-    ],
-    copyright: '© 2024 MEI MAREA. ALL RIGHTS RESERVED.'
-  }
-};
-
 // --- MARQUEE COMPONENT ---
 const Marquee = () => {
   const { marqueeText, isEditMode } = useEditor();
@@ -1147,7 +578,7 @@ const Marquee = () => {
 };
 
 // --- PRODUCT CARD COMPONENT ---
-const ProductCard: React.FC<{ product: Product, config?: typeof INITIAL_CONFIG_KR }> = ({ product, config }) => {
+const ProductCard: React.FC<{ product: Product, config?: typeof INITIAL_CONFIG }> = ({ product, config }) => {
   const getFilter = (url: string) => {
     if (config?.theme?.imageFilters && config.theme.imageFilters[url]) {
       return config.theme.imageFilters[url];
@@ -1189,7 +620,7 @@ const ProductCard: React.FC<{ product: Product, config?: typeof INITIAL_CONFIG_K
 };
 
 // --- PAGE: HOME ---
-const HomePage = ({ config, user }: { config: typeof INITIAL_CONFIG_KR, user: User | null }) => {
+const HomePage = ({ config, user }: { config: typeof INITIAL_CONFIG, user: User | null }) => {
   const [latestProducts, setLatestProducts] = useState<Product[]>([]);
   
   useEffect(() => {
@@ -1222,9 +653,9 @@ const HomePage = ({ config, user }: { config: typeof INITIAL_CONFIG_KR, user: Us
 
   return (
     <>
-      <main className="pt-[110px]">
+      <main className="pt-48">
         {/* Hero Section */}
-        <section className="px-4 md:px-16 pt-4 pb-12 items-center flex flex-col md:flex-row gap-12 md:gap-24">
+        <section className="px-4 md:px-16 py-12 md:py-24 flex flex-col md:flex-row items-center gap-12 md:gap-24">
           <motion.div className="w-full md:w-5/12" {...fadeInUp}>
             <div className="text-4xl md:text-6xl font-medium uppercase tracking-[0.05em] leading-tight mb-8">
               <EditableText path="hero.title" value={config.hero.title} multiline />
@@ -1546,7 +977,7 @@ const HomePage = ({ config, user }: { config: typeof INITIAL_CONFIG_KR, user: Us
 };
 
 // --- PAGE: SHOP ---
-const ShopPage = ({ user, config }: { user: User | null, config: typeof INITIAL_CONFIG_KR }) => {
+const ShopPage = ({ user, config }: { user: User | null, config: typeof INITIAL_CONFIG }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const { isEditMode } = useEditor();
@@ -1639,10 +1070,10 @@ const ShopPage = ({ user, config }: { user: User | null, config: typeof INITIAL_
   const uniqueBrands = Array.from(new Set(products.map(p => p.brand).filter(Boolean))) as string[];
   const uniqueCategories = Array.from(new Set(products.map(p => p.category).filter(Boolean))) as string[];
 
-  if (loading) return <div className="pt-[110px] flex justify-center"><Loader2 className="animate-spin text-gray-300" /></div>;
+  if (loading) return <div className="pt-48 flex justify-center"><Loader2 className="animate-spin text-gray-300" /></div>;
 
   return (
-    <div className="pt-[110px] px-0 md:px-0 mb-24 w-full min-h-screen">
+    <div className="pt-48 px-0 md:px-0 mb-24 w-full min-h-screen">
       <div className="flex flex-col items-center mb-16 relative w-full pt-8 px-4 md:px-12">
         <Link to="/" className="flex items-center text-sm font-medium hover:text-gray-500 transition-colors mb-8 text-gray-900 absolute left-4 md:left-12 top-8">
           <ArrowLeft size={16} className="mr-2" />
@@ -2012,8 +1443,7 @@ const ProductEditView = ({ id, onClose }: { id: string, onClose: () => void }) =
 };
 
 // --- PAGE: PRODUCT DETAIL ---
-const ProductDetailPage = ({ config, user }: { config: typeof INITIAL_CONFIG_KR, user: User | null }) => {
-  const { isEditMode } = useEditor();
+const ProductDetailPage = ({ config, user }: { config: typeof INITIAL_CONFIG, user: User | null }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
@@ -2066,8 +1496,8 @@ const ProductDetailPage = ({ config, user }: { config: typeof INITIAL_CONFIG_KR,
     }
   };
 
-  if (loading) return <div className="pt-[110px] flex justify-center"><Loader2 className="animate-spin text-gray-300" /></div>;
-  if (!product) return <div className="pt-[110px] text-center">Product not found.</div>;
+  if (loading) return <div className="pt-48 flex justify-center"><Loader2 className="animate-spin text-gray-300" /></div>;
+  if (!product) return <div className="pt-48 text-center">Product not found.</div>;
 
   const getFilter = (url: string) => {
     if (config?.theme?.imageFilters && config.theme.imageFilters[url]) {
@@ -2077,7 +1507,7 @@ const ProductDetailPage = ({ config, user }: { config: typeof INITIAL_CONFIG_KR,
   };
 
   return (
-    <div className="pt-[110px] px-0 md:px-0 mb-32 w-full min-h-screen">
+    <div className="pt-48 px-0 md:px-0 mb-32 w-full min-h-screen">
       <div className="md:px-16 px-4 mb-4">
         <div className="flex items-center gap-2 text-[12px] text-gray-500">
           <Link to="/" className="hover:underline text-gray-900"><EditableText path="labels.breadcrumbRoot" value={config.labels.breadcrumbRoot} /></Link>
@@ -2103,7 +1533,7 @@ const ProductDetailPage = ({ config, user }: { config: typeof INITIAL_CONFIG_KR,
                   onClick={() => setActiveImage(idx)}
                   className={`border-b-2 md:border-b-0 md:border-l-2 transition-all p-1 ${activeImage === idx ? 'border-gray-900' : 'border-transparent opacity-50 hover:opacity-100'}`}
                 >
-                  <img src={img} alt={`${product.name} ${idx + 1}`} title={`${product.name} ${idx + 1}`} className={`w-16 md:w-20 object-cover aspect-square ${getFilter(img)}`} />
+                  <img src={img} alt={`${product.name} ${idx + 1}`} className={`w-16 md:w-20 object-cover aspect-square ${getFilter(img)}`} />
                 </button>
               ))}
             </div>
@@ -2194,21 +1624,18 @@ const ProductDetailPage = ({ config, user }: { config: typeof INITIAL_CONFIG_KR,
             >
               {product.stock > 0 ? <EditableText path="labels.addToBag" value={config.labels.addToBag} /> : 'SOLD OUT'}
             </button>
-            <div 
-              role="button" tabIndex={0}
-              onClick={(e) => { if (isEditMode) e.preventDefault(); else if (product) toggleWishlist(product); }}
-              className="cursor-pointer flex-1 py-4 border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors whitespace-nowrap"
+            <button 
+              onClick={() => product && toggleWishlist(product)}
+              className="flex-1 py-4 border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors whitespace-nowrap"
             >
               <span className="sr-only">Wishlist</span>
               <EditableText path="labels.wishlist" value={config.labels.wishlist} /> 
-              <UploadableIcon 
-                iconId="wishlistDetail"
-                fallback={KissMark}
+              <Heart 
                 size={18} 
                 className="ml-2" 
                 fill={product && wishlist.some(item => item.id === product.id) ? "currentColor" : "none"} 
               />
-            </div>
+            </button>
           </div>
 
           {/* Delivery & Returns Info */}
@@ -2338,11 +1765,54 @@ const ProductDetailPage = ({ config, user }: { config: typeof INITIAL_CONFIG_KR,
 
 // --- CART DRAWER COMPONENT ---
 const CartDrawer = () => {
-  const { cart, removeFromCart, updateQuantity, isCartOpen, setIsCartOpen } = useCart();
-  const { config, imageFilters, globalPhotoFilter } = useEditor();
+  const { cart, removeFromCart, updateQuantity, isCartOpen, setIsCartOpen, setCart } = useCart();
+  const { imageFilters, globalPhotoFilter } = useEditor();
   const totalPrice = cart.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
 
   const getFilter = (url: string) => imageFilters[url] !== undefined ? imageFilters[url] : globalPhotoFilter;
+
+  const handleCheckout = async () => {
+    const user = auth.currentUser;
+    if (!user) {
+      alert("Please login to proceed with checkout.");
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      return;
+    }
+
+    try {
+      const orderData = {
+        userId: user.uid,
+        email: user.email!,
+        totalAmount: totalPrice,
+        status: 'pending',
+        items: cart,
+        createdAt: serverTimestamp()
+      };
+      
+      const orderRef = await addDoc(collection(db, `users/${user.uid}/orders`), orderData);
+      
+      // Sync with Google Sheets
+      await fetch('/api/sync-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          order: { 
+            ...orderData, 
+            id: orderRef.id,
+            createdAt: new Date().toISOString() 
+          } 
+        })
+      });
+
+      alert("ORDER PLACED!\n\nYour order has been recorded and synced to the tracking system.");
+      setCart([]);
+      setIsCartOpen(false);
+    } catch (e) {
+      console.error("Checkout error:", e);
+      alert("Failed to place order. Please try again.");
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -2360,9 +1830,7 @@ const CartDrawer = () => {
             className="fixed top-0 right-0 h-full w-full max-w-md bg-white z-[210] shadow-2xl flex flex-col"
           >
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold uppercase tracking-widest">
-    <EditableText path="labels.cartSidePeekTitle" value={config.labels.cartSidePeekTitle || 'Shopping Bag'} />
-  </h2>
+              <h2 className="text-xl font-bold uppercase tracking-widest">Shopping Bag</h2>
               <button onClick={() => setIsCartOpen(false)} className="hover:opacity-70">
                 <X size={24} />
               </button>
@@ -2370,14 +1838,16 @@ const CartDrawer = () => {
             
             <div className="flex-grow overflow-y-auto p-6 space-y-8">
               {cart.length === 0 ? (
-                <div className="text-center text-gray-500 font-medium uppercase tracking-widest text-sm py-12"><EditableText path="labels.cartEmpty" value={config.labels.cartEmpty || "Your bag is empty"} /></div>
+                <div className="text-center text-gray-500 font-medium uppercase tracking-widest text-sm py-12">
+                  Your bag is empty
+                </div>
               ) : (
                 cart.map(item => (
                   <div key={item.product.id} className="flex gap-4">
-                    <img src={item.product.images[0]} alt={item.product.name} title={item.product.name} className={`w-24 h-32 object-cover border border-gray-100 ${getFilter(item.product.images[0])}`} />
+                    <img src={item.product.images[0]} alt={item.product.name} className={`w-24 h-32 object-cover border border-gray-100 ${getFilter(item.product.images[0])}`} />
                     <div className="flex-grow flex flex-col justify-between">
                       <div>
-                        <h3 className="font-bold text-sm uppercase tracking-wide">{item.product.brand || 'Cult Gaia'}</h3>
+                        <h3 className="font-bold text-sm uppercase tracking-wide">{item.product.brand || 'MEI MAREA'}</h3>
                         <p className="text-sm text-gray-500 mb-2">{item.product.name}</p>
                         <p className="text-sm font-medium">₩{item.product.price.toLocaleString()}</p>
                       </div>
@@ -2388,7 +1858,12 @@ const CartDrawer = () => {
                           <span className="text-xs font-medium">{item.quantity}</span>
                           <button onClick={() => updateQuantity(item.product.id!, item.quantity + 1)} className="hover:text-gray-500">+</button>
                         </div>
-                        <button onClick={() => removeFromCart(item.product.id!)} className="text-xs text-gray-500 underline uppercase tracking-wider hover:text-black"><EditableText path="labels.remove" value={config.labels.remove || "Remove"} /></button>
+                        <button 
+                          onClick={() => removeFromCart(item.product.id!)}
+                          className="text-xs text-gray-500 underline uppercase tracking-wider hover:text-black"
+                        >
+                          Remove
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -2399,41 +1874,11 @@ const CartDrawer = () => {
             {cart.length > 0 && (
               <div className="p-6 border-t border-gray-200 bg-gray-50">
                 <div className="flex justify-between items-center mb-6">
-                  <span className="font-bold uppercase tracking-widest text-sm"><EditableText path="labels.total" value={config.labels.total || "Total"} /></span>
+                  <span className="font-bold uppercase tracking-widest text-sm">Total</span>
                   <span className="font-bold text-lg">₩{totalPrice.toLocaleString()}</span>
                 </div>
                 <button 
-                  onClick={async () => {
-                    const authUser = auth.currentUser;
-                    if (!authUser) {
-                      console.error("주문을 진행하려면 로그인해주세요.");
-                      return;
-                    }
-                    try {
-                      const orderRef = collection(db, `users/${authUser.uid}/orders`);
-                      await addDoc(orderRef, {
-                        userId: authUser.uid,
-                        items: cart.map(item => ({
-                          productId: item.product.id,
-                          name: item.product.name,
-                          price: item.product.price,
-                          quantity: item.quantity,
-                          images: item.product.images
-                        })),
-                        totalAmount: totalPrice,
-                        status: 'pending',
-                        createdAt: serverTimestamp()
-                      });
-                      
-                      console.error("주문이 성공적으로 접수되었습니다!");
-                      // Optionally clear cart here if you have clearCart method
-                      cart.forEach((item) => removeFromCart(item.product.id!));
-                      setIsCartOpen(false);
-                    } catch(err) {
-                      handleFirestoreError(err, OperationType.CREATE, `users/${authUser.uid}/orders`);
-                      console.error("주문 처리 중 오류가 발생했습니다.");
-                    }
-                  }}
+                  onClick={handleCheckout}
                   className="w-full bg-black text-white py-4 uppercase font-bold tracking-widest text-sm hover:bg-gray-800 transition-colors"
                 >
                   Checkout
@@ -2450,7 +1895,7 @@ const CartDrawer = () => {
 // --- WISHLIST DRAWER COMPONENT ---
 const WishlistDrawer = () => {
   const { wishlist, toggleWishlist, isWishlistOpen, setIsWishlistOpen } = useWishlist();
-  const { config, imageFilters, globalPhotoFilter } = useEditor();
+  const { imageFilters, globalPhotoFilter } = useEditor();
 
   const getFilter = (url: string) => imageFilters[url] !== undefined ? imageFilters[url] : globalPhotoFilter;
 
@@ -2470,9 +1915,7 @@ const WishlistDrawer = () => {
             className="fixed top-0 right-0 h-full w-full max-w-md bg-white z-[210] shadow-2xl flex flex-col"
           >
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold uppercase tracking-widest">
-    <EditableText path="labels.wishlistSidePeekTitle" value={config.labels.wishlistSidePeekTitle || 'Wishlist'} />
-  </h2>
+              <h2 className="text-xl font-bold uppercase tracking-widest">Wishlist</h2>
               <button onClick={() => setIsWishlistOpen(false)} className="hover:opacity-70">
                 <X size={24} />
               </button>
@@ -2480,11 +1923,13 @@ const WishlistDrawer = () => {
             
             <div className="flex-grow overflow-y-auto p-6 space-y-8">
               {wishlist.length === 0 ? (
-                <div className="text-center text-gray-500 font-medium uppercase tracking-widest text-sm py-12"><EditableText path="labels.wishlistEmpty" value={config.labels.wishlistEmpty || "Your wishlist is empty"} /></div>
+                <div className="text-center text-gray-500 font-medium uppercase tracking-widest text-sm py-12">
+                  Your wishlist is empty
+                </div>
               ) : (
                 wishlist.map(product => (
                   <div key={product.id} className="flex gap-4 group">
-                    <img src={product.images[0]} alt={product.name} title={product.name} className={`w-24 h-32 object-cover border border-gray-100 ${getFilter(product.images[0])}`} />
+                    <img src={product.images[0]} alt={product.name} className={`w-24 h-32 object-cover border border-gray-100 ${getFilter(product.images[0])}`} />
                     <div className="flex-grow flex flex-col justify-between">
                       <div>
                         <h3 className="font-bold text-sm uppercase tracking-wide">{product.brand || 'Cult Gaia'}</h3>
@@ -2493,7 +1938,12 @@ const WishlistDrawer = () => {
                       </div>
                       
                       <div className="flex items-center justify-end">
-                        <button onClick={() => toggleWishlist(product)} className="text-xs text-gray-500 underline uppercase tracking-wider hover:text-black"><EditableText path="labels.remove" value={config.labels.remove || "Remove"} /></button>
+                        <button 
+                          onClick={() => toggleWishlist(product)}
+                          className="text-xs text-gray-500 underline uppercase tracking-wider hover:text-black"
+                        >
+                          Remove
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -2518,19 +1968,107 @@ const WishlistDrawer = () => {
   );
 };
 
+const AccountPage = ({ user }: { user: User | null }) => {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchOrders = async () => {
+      try {
+        const q = query(collection(db, `users/${user.uid}/orders`), orderBy('createdAt', 'desc'));
+        const snap = await getDocs(q);
+        setOrders(snap.docs.map(d => ({ id: d.id, ...d.data() } as Order)));
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrders();
+  }, [user]);
+
+  if (!user) return (
+    <div className="pt-64 px-4 text-center min-h-[60vh]">
+      <h1 className="text-2xl font-light uppercase tracking-widest mb-8">Please Login</h1>
+      <button 
+        onClick={async () => {
+          const provider = new GoogleAuthProvider();
+          await signInWithPopup(auth, provider);
+        }} 
+        className="border border-black px-12 py-4 text-xs font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-all"
+      >
+        Login with Google
+      </button>
+    </div>
+  );
+
+  return (
+    <div className="pt-64 px-4 md:px-12 max-w-7xl mx-auto pb-32 min-h-screen">
+      <div className="flex flex-col md:flex-row gap-16">
+        <div className="md:w-1/3">
+          <h1 className="text-3xl font-light uppercase tracking-tighter mb-8 italic">My Account</h1>
+          <div className="space-y-6">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Email</p>
+              <p className="text-sm font-medium">{user.email}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Name</p>
+              <p className="text-sm font-medium">{user.displayName || 'Guest'}</p>
+            </div>
+            <button onClick={() => auth.signOut()} className="text-[10px] font-bold uppercase tracking-widest border-b border-black pb-1 hover:text-gray-400 hover:border-gray-400 transition-colors">Sign Out</button>
+          </div>
+        </div>
+        
+        <div className="md:w-2/3">
+          <h2 className="text-xl font-light uppercase tracking-widest mb-12 border-b border-black/5 pb-4">Order History</h2>
+          {loading ? (
+             <p className="text-xs font-mono text-gray-400">Loading orders...</p>
+          ) : orders.length === 0 ? (
+             <p className="text-gray-500 text-sm italic">You haven't placed any orders yet.</p>
+          ) : (
+            <div className="space-y-8">
+              {orders.map(order => (
+                <div key={order.id} className="border border-gray-100 p-6 bg-gray-50/30">
+                  <div className="flex justify-between items-start mb-6">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Order ID</p>
+                      <p className="text-xs font-mono">{order.id}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Status</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-black bg-white border border-black px-3 py-1 inline-block">{order.status}</p>
+                    </div>
+                  </div>
+                  <div className="divide-y divide-gray-100">
+                    {(order.items || []).map((item, idx) => (
+                      <div key={idx} className="py-3 flex justify-between items-center text-xs">
+                        <span className="text-gray-600 truncate mr-4">{item.product.name} x {item.quantity}</span>
+                        <span className="font-medium whitespace-nowrap">₩{(item.product.price * item.quantity).toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-6 pt-4 border-t border-black/5 flex justify-between items-center">
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Total Amount</span>
+                    <span className="text-sm font-bold">₩{order.totalAmount.toLocaleString()}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const InventoryPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const { config } = useEditor();
-
-  const getFilter = (url: string) => {
-    if (config?.theme?.imageFilters && config.theme.imageFilters[url]) {
-      return config.theme.imageFilters[url];
-    }
-    return config?.theme?.photoFilter || '';
-  };
+  const { imageFilters } = useEditor();
 
   const fetchProducts = async () => {
     try {
@@ -2558,7 +2096,7 @@ const InventoryPage = () => {
       console.error("Update failed", err);
       // Rollback on failure
       setProducts(previousProducts);
-      console.error(`Failed to update stock: ${err.message}`);
+      alert(`Failed to update stock: ${err.message}`);
     }
   };
 
@@ -2573,13 +2111,13 @@ const InventoryPage = () => {
       
       const result = await response.json();
       if (response.ok) {
-        console.error("PUSH COMPLETE!\n\nInventory has been pushed to Google Sheets.");
+        alert("PUSH COMPLETE!\n\nInventory has been pushed to Google Sheets.");
       } else {
         throw new Error(result.error || "Unknown sync error");
       }
     } catch (error: any) {
       console.error("Sync Error:", error);
-      console.error(`SYNC ERROR:\n\n${error.message}`);
+      alert(`SYNC ERROR:\n\n${error.message}`);
     } finally {
       setSyncing(false);
     }
@@ -2610,13 +2148,13 @@ const InventoryPage = () => {
           await Promise.all(updates);
           await fetchProducts();
         }
-        console.error("PULL COMPLETE!\n\nInventory synchronized from Google Sheets.");
+        alert("PULL COMPLETE!\n\nInventory synchronized from Google Sheets.");
       } else {
         throw new Error(result.error || "Unknown sync error");
       }
     } catch (error: any) {
       console.error("Sync Error:", error);
-      console.error(`SYNC ERROR:\n\n${error.message}`);
+      alert(`SYNC ERROR:\n\n${error.message}`);
     } finally {
       setSyncing(false);
     }
@@ -2630,12 +2168,7 @@ const InventoryPage = () => {
         <header className="mb-16 border-b border-gray-100 pb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
             <h1 className="text-3xl font-light tracking-tighter mb-2">Inventory Management</h1>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-4">Inventory Status & Stock Analysis</p>
-            <div className="inline-flex items-center gap-2 bg-gray-50 text-[10px] font-bold tracking-widest uppercase py-2 px-3 text-gray-500 border border-gray-100">
-              <Plus size={10} /> 
-              <span>Want to add new products? Visit the </span>
-              <Link to="/shop" className="text-black underline underline-offset-2 hover:text-gray-600 transition-colors">Shop Page</Link>
-            </div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">Inventory Status & Stock Analysis</p>
           </div>
           <div className="flex gap-4 items-end">
             <button 
@@ -2681,7 +2214,7 @@ const InventoryPage = () => {
                   <td className="py-6">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-16 bg-gray-100 overflow-hidden flex-shrink-0">
-                        <img src={product.images[0]} alt={product.name} title={product.name} className={`w-full h-full object-cover ${getFilter(product.images[0])}`} />
+                        <img src={product.images[0]} alt={product.name} className={`w-full h-full object-cover ${getFilter(product.images[0])}`} />
                       </div>
                       <div className="min-w-0">
                         <div className="text-[13px] font-medium uppercase tracking-wider mb-1 group-hover:text-black transition-colors truncate">{product.name}</div>
@@ -2785,55 +2318,10 @@ const InventoryPage = () => {
 };
 
 export default function App() {
-  const [lang, setLang] = useState<'KR'|'EN'>('KR');
-  const [fullConfig, setFullConfig] = useState(() => {
-    const saved = localStorage.getItem('siteConfig');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        
-        // Deep merge function
-        const deepMerge = (target, source) => {
-          if (!source) return target;
-          const output = Object.assign({}, target);
-          if (isObject(target) && isObject(source)) {
-            Object.keys(source).forEach(key => {
-              if (isObject(source[key])) {
-                if (!(key in target))
-                  Object.assign(output, { [key]: source[key] });
-                else
-                  output[key] = deepMerge(target[key], source[key]);
-              } else {
-                Object.assign(output, { [key]: source[key] });
-              }
-            });
-          }
-          return output;
-        };
-        
-        const isObject = (item) => (item && typeof item === 'object' && !Array.isArray(item));
-
-        if (parsed.KR && parsed.EN) {
-             return {
-                 KR: deepMerge(INITIAL_CONFIG_KR, parsed.KR),
-                 EN: deepMerge(INITIAL_CONFIG_EN, parsed.EN)
-             };
-        }
-        
-        // Migrate legacy config if valid object
-        if (parsed.brand) {
-          return { KR: deepMerge(INITIAL_CONFIG_KR, parsed), EN: INITIAL_CONFIG_EN };
-        }
-      } catch (e) {
-        console.error("Failed to parse config", e);
-      }
-    }
-    return { KR: INITIAL_CONFIG_KR, EN: INITIAL_CONFIG_EN };
-  });
-
-  const config = fullConfig[lang];
+  const [config, setConfig] = useState(INITIAL_CONFIG);
   const [isEditMode, setIsEditMode] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+
   const [activeMainMenuId, setActiveMainMenuId] = useState('women');
 
   // Cart State
@@ -2843,11 +2331,6 @@ export default function App() {
   // Wishlist State
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isLeftMenuOpen, setIsLeftMenuOpen] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-  const [searchKeyword, setSearchKeyword] = useState('');
 
   useEffect(() => {
     const savedCart = localStorage.getItem('shoppingCart');
@@ -2881,9 +2364,25 @@ export default function App() {
 
   // Persistence & Auth Listener
   useEffect(() => {
+    const saved = localStorage.getItem('siteConfig');
+    if (saved) {
+      try { 
+        const parsed = JSON.parse(saved);
+        setConfig(prev => ({
+          ...INITIAL_CONFIG,
+          ...parsed,
+          labels: { ...INITIAL_CONFIG.labels, ...(parsed.labels || {}) },
+          brand: { ...INITIAL_CONFIG.brand, ...(parsed.brand || {}) },
+          theme: { ...INITIAL_CONFIG.theme, ...(parsed.theme || {}) },
+          marquee: { ...INITIAL_CONFIG.marquee, ...(parsed.marquee || {}) }
+        }));
+      } catch (e) { console.error(e); }
+    }
+    
     return onAuthStateChanged(auth, async (u) => {
       setUser(u);
       if (u) {
+        syncUserWithSheets(u);
         try {
           const wishlistRef = collection(db, `users/${u.uid}/wishlist`);
           const snapshot = await getDocs(wishlistRef);
@@ -2908,34 +2407,12 @@ export default function App() {
     });
   }, []);
 
-  const isInIframe = () => {
-    try {
-      return window.self !== window.top;
-    } catch (e) {
-      return true;
-    }
-  };
-
-  const login = () => {
-    if (isInIframe()) {
-      setShowLoginModal(true);
-    } else {
-      performGoogleLogin();
-    }
-  };
-
-  const performGoogleLogin = async () => {
+  const login = async () => {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      setShowLoginModal(false);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Login failed:", error);
-      if (error.code === 'auth/popup-closed-by-user') {
-        // user closed it, do nothing
-      } else {
-        console.error("로그인에 실패했습니다. " + error.message);
-      }
     }
   };
 
@@ -2981,62 +2458,60 @@ export default function App() {
 
 
   const logout = () => auth.signOut();
+  
+  const syncUserWithSheets = async (u: User) => {
+    try {
+      await fetch('/api/sync-users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user: {
+            uid: u.uid,
+            email: u.email,
+            displayName: u.displayName
+          }
+        })
+      });
+    } catch (error) {
+      console.error("Failed to sync user with sheets:", error);
+    }
+  };
+
+  const saveConfig = (newConfig: typeof INITIAL_CONFIG) => {
+    setConfig(newConfig);
+    localStorage.setItem('siteConfig', JSON.stringify(newConfig));
+  };
 
   const updateField = (path: string, value: string) => {
-    setFullConfig(prevConfig => {
-      const keys = path.split('.');
-      const nextConfig = JSON.parse(JSON.stringify(prevConfig));
-      let current = nextConfig[lang];
-      for (let i = 0; i < keys.length - 1; i++) {
-        if (!current[keys[i]]) current[keys[i]] = {};
-        current = current[keys[i]];
-      }
-      current[keys[keys.length - 1]] = value;
-      try {
-        localStorage.setItem('siteConfig', JSON.stringify(nextConfig));
-      } catch (e) {
-        console.error('LocalStorage quota exceeded');
-        console.error('Image too large to be saved across reloads.');
-      }
-      return nextConfig;
-    });
+    const keys = path.split('.');
+    const nextConfig = JSON.parse(JSON.stringify(config));
+    let current = nextConfig;
+    for (let i = 0; i < keys.length - 1; i++) {
+      current = current[keys[i]];
+    }
+    current[keys[keys.length - 1]] = value;
+    saveConfig(nextConfig);
   };
 
   const updateListItem = (listPath: string, id: string, field: string, value: string) => {
-    setFullConfig(prevConfig => {
-      const nextConfig = JSON.parse(JSON.stringify(prevConfig));
-      const keys = listPath.split('.');
-      let list = nextConfig[lang];
-      for (const key of keys) { list = list[key]; }
-      
-      const index = list.findIndex((item: any) => item.id === id);
-      if (index !== -1) {
-        list[index][field] = value;
-        try {
-        localStorage.setItem('siteConfig', JSON.stringify(nextConfig));
-      } catch (e) {
-        console.error('LocalStorage quota exceeded');
-        console.error('Image too large to be saved across reloads.');
-      }
-      }
-      return nextConfig;
-    });
+    const nextConfig = JSON.parse(JSON.stringify(config));
+    const keys = listPath.split('.');
+    let list = nextConfig;
+    for (const key of keys) { list = list[key]; }
+    
+    const index = list.findIndex((item: any) => item.id === id);
+    if (index !== -1) {
+      list[index][field] = value;
+      saveConfig(nextConfig);
+    }
   };
 
   const updateImageFilter = (url: string, filterClass: string) => {
-    setFullConfig(prevConfig => {
-      const nextConfig = JSON.parse(JSON.stringify(prevConfig));
-      if (!nextConfig[lang].theme) nextConfig[lang].theme = {};
-      if (!nextConfig[lang].theme.imageFilters) nextConfig[lang].theme.imageFilters = {};
-      nextConfig[lang].theme.imageFilters[url] = filterClass;
-      try {
-        localStorage.setItem('siteConfig', JSON.stringify(nextConfig));
-      } catch (e) {
-        console.error('LocalStorage quota exceeded');
-        console.error('Image too large to be saved across reloads.');
-      }
-      return nextConfig;
-    });
+    const nextConfig = JSON.parse(JSON.stringify(config));
+    if (!nextConfig.theme) nextConfig.theme = {};
+    if (!nextConfig.theme.imageFilters) nextConfig.theme.imageFilters = {};
+    nextConfig.theme.imageFilters[url] = filterClass;
+    saveConfig(nextConfig);
   };
 
   const contextValue = {
@@ -3044,123 +2519,40 @@ export default function App() {
     updateField,
     updateListItem,
     updateImageFilter,
-    marqueeText: config.marquee?.text || INITIAL_CONFIG_KR.marquee.text,
+    marqueeText: config.marquee?.text || INITIAL_CONFIG.marquee.text,
     imageFilters: config.theme?.imageFilters || {},
-    globalPhotoFilter: config.theme?.photoFilter || '',
-    config
+    globalPhotoFilter: config.theme?.photoFilter || ''
   };
 
   return (
     <BrowserRouter>
-      <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, isCartOpen, setIsCartOpen }}>
+      <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, isCartOpen, setIsCartOpen, setCart }}>
         <WishlistContext.Provider value={{ wishlist, toggleWishlist, isWishlistOpen, setIsWishlistOpen }}>
           <EditorContext.Provider value={contextValue}>
             <CartDrawer />
             <WishlistDrawer />
-
-            <AnimatePresence>
-              {showLoginModal && (
-                <>
-                  <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 bg-black/20 z-[300]"
-                    onClick={() => setShowLoginModal(false)}
-                  />
-                  <motion.div 
-                    initial={{ x: '100%' }}
-                    animate={{ x: 0 }}
-                    exit={{ x: '100%' }}
-                    transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                    className="fixed top-0 right-0 h-full w-full max-w-sm bg-white z-[301] shadow-2xl flex flex-col p-8"
-                  >
-                    <button 
-                      onClick={() => setShowLoginModal(false)}
-                      className="absolute top-6 right-6 text-gray-400 hover:text-black transition-colors"
-                    >
-                      <X size={20} strokeWidth={1} />
-                    </button>
-                    
-                    <div className="flex flex-col items-center text-center mt-12 w-full">
-                      <div className="w-24 h-24 flex items-center justify-center mb-6 relative group">
-                        <UploadableAvatar size={80} className="group-hover:scale-110 transition-transform duration-500 origin-bottom" />
-                        <Sparkles size={16} className="absolute top-0 -right-2 text-yellow-400 animate-pulse" />
-                      </div>
-                      
-                      <h2 className="text-2xl font-light tracking-widest uppercase mb-4" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
-    <EditableText path="labels.memberAccessTitle" value={config.labels.memberAccessTitle || 'Member Access'} />
-  </h2>
-                      <p className="text-sm text-gray-500 mb-10 leading-relaxed text-center">
-    <EditableText path="labels.memberAccessDesc" value={config.labels.memberAccessDesc || '회원가입하고 독점 컬렉션과 위시리스트 등 특별한 혜택을 누려보세요.'} multiline={true} />
-  </p>
-                      
-                      <button
-                        onClick={performGoogleLogin}
-                        className="w-full bg-black text-white py-4 text-[11px] font-bold tracking-widest uppercase hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 group"
-                      >
-                        Continue with Google
-                        <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                      </button>
-                    </div>
-                  </motion.div>
-                </>
-              )}
-            </AnimatePresence>
-
-            <div className={`flex flex-col min-h-screen bg-white overflow-x-hidden ${isEditMode ? 'cursor-auto' : ''}`}>
-          {/* Edit Mode Toggle & Controls */}
-          <motion.div 
-            drag
-            dragMomentum={false}
-            className="fixed bottom-8 right-8 z-[100] flex flex-col items-end gap-2 cursor-move"
-          >
+            <div className={`flex flex-col min-h-screen bg-white ${isEditMode ? 'cursor-auto' : ''}`}>
+          {/* Edit Mode Toggle */}
+          <div className="fixed bottom-8 right-8 z-[100] flex flex-col items-end gap-2">
             {isEditMode && (
-              <div 
-                className="bg-white p-4 rounded-[20px] shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-gray-100 text-black w-72 mb-2 cursor-auto"
-                onPointerDownCapture={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-2">
-                  <h3 className="text-[10px] font-bold uppercase tracking-widest">Nav Title Size (vw)</h3>
-                  <SlidersHorizontal size={14} className="text-gray-400" />
-                </div>
-                
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-medium text-gray-500 uppercase tracking-widest">Mobile</label>
-                    <input 
-                      type="range" min="1" max="25" step="0.5" 
-                      value={config.brand.nameSize?.mobile || 10}
-                      onChange={(e) => updateField('brand.nameSize.mobile', e.target.value)}
-                      className="w-32 accent-black"
-                    />
-                    <span className="text-xs font-mono w-8 text-right bg-gray-50 px-1 py-0.5 rounded">{config.brand.nameSize?.mobile || 10}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-medium text-gray-500 uppercase tracking-widest">Tablet</label>
-                    <input 
-                      type="range" min="1" max="25" step="0.5"
-                      value={config.brand.nameSize?.tablet || 7}
-                      onChange={(e) => updateField('brand.nameSize.tablet', e.target.value)}
-                      className="w-32 accent-black"
-                    />
-                     <span className="text-xs font-mono w-8 text-right bg-gray-50 px-1 py-0.5 rounded">{config.brand.nameSize?.tablet || 7}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-medium text-gray-500 uppercase tracking-widest">Desktop</label>
-                    <input 
-                      type="range" min="1" max="25" step="0.5"
-                      value={config.brand.nameSize?.desktop || 3}
-                      onChange={(e) => updateField('brand.nameSize.desktop', e.target.value)}
-                      className="w-32 accent-black"
-                    />
-                     <span className="text-xs font-mono w-8 text-right bg-gray-50 px-1 py-0.5 rounded">{config.brand.nameSize?.desktop || 3}</span>
-                  </div>
-                </div>
+              <div className="bg-white p-3 rounded-xl shadow-lg border border-gray-100 mb-2">
+                <label className="block text-[9px] font-bold uppercase tracking-widest text-gray-500 mb-2">Photo Filter</label>
+                <select 
+                  value={config.theme?.photoFilter || ''}
+                  onChange={(e) => saveConfig({...config, theme: {...config.theme, photoFilter: e.target.value}})}
+                  className="text-xs border border-gray-200 rounded p-1 outline-none w-40"
+                >
+                  <option value="">None</option>
+                  <option value="retro-filter">Retro</option>
+                  <option value="filter-kodachrome">Kodachrome</option>
+                  <option value="filter-agfa-vista">Agfa Vista</option>
+                  <option value="filter-agfa-ultra">Agfa Ultra</option>
+                  <option value="filter-fuji-fortia">Fuji Fortia SP</option>
+                </select>
               </div>
             )}
             <button 
-              onClick={(e) => { e.stopPropagation(); setIsEditMode(!isEditMode); }}
+              onClick={() => setIsEditMode(!isEditMode)}
               className={`group flex items-center gap-3 px-6 py-3 rounded-full shadow-lg transition-all duration-500 ${isEditMode ? 'bg-black text-white' : 'bg-white text-black hover:bg-gray-100'}`}
             >
               {isEditMode ? <Check size={18} /> : <Edit3 size={18} />}
@@ -3168,270 +2560,96 @@ export default function App() {
                 {isEditMode ? '편집 저장' : '편집 모드'}
               </span>
             </button>
-          </motion.div>
-
-          {/* Dynamic Style for Brand Name */}
-          <style>{`
-            .responsive-brand-title {
-              font-size: ${config.brand.nameSize?.mobile || 10}vw !important;
-            }
-            @media (min-width: 768px) {
-              .responsive-brand-title {
-                font-size: ${config.brand.nameSize?.tablet || 7}vw !important;
-              }
-            }
-            @media (min-width: 1024px) {
-              .responsive-brand-title {
-                font-size: ${config.brand.nameSize?.desktop || 3}vw !important;
-              }
-            }
-          `}</style>
+          </div>
 
           {/* TopNavBar */}
           <header className="fixed top-0 left-0 w-full z-50 bg-white border-b border-gray-100">
             <Marquee />
             
             {/* Top row */}
-            <div className="py-4 px-4 md:py-5 md:px-12 flex items-center justify-between w-full relative">
+            <div className="py-5 px-4 md:px-12 grid grid-cols-3 items-center">
               {/* Left: Collections */}
-              <div className="flex-1 flex items-center gap-4">
-                <div 
-                  role="button" 
-                  tabIndex={0} 
-                  className={`lg:hidden text-gray-800 cursor-pointer p-2 rounded-full transition-all ${isLeftMenuOpen ? 'bg-black text-white' : 'hover:bg-gray-50'}`}
-                  onClick={(e) => { 
-                    if (isEditMode) e.preventDefault(); 
-                    setIsLeftMenuOpen(!isLeftMenuOpen);
-                    setIsMenuOpen(false); // Close other menu
-                  }}
-                >
-                  <UploadableIcon iconId="menuNav" fallback={Menu} size={20} strokeWidth={1.5} />
-                </div>
-                
-                {/* Mobile Main Collection Menu Overlay */}
-                <AnimatePresence>
-                  {isLeftMenuOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      className="absolute top-full left-4 mt-3 bg-white border border-gray-100 shadow-2xl rounded-none p-2 z-[400] min-w-[180px] lg:hidden"
-                    >
-                      {config.navMainMenu?.map((mainMenu, idx) => (
-                        <button
-                          key={mainMenu.id}
-                          onClick={() => {
-                            setActiveMainMenuId(mainMenu.id);
-                            setIsLeftMenuOpen(false);
-                          }}
-                          className={`w-full text-left px-5 py-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all rounded-none ${activeMainMenuId === mainMenu.id ? 'bg-gray-50 text-black translate-x-1' : 'text-gray-400 hover:bg-gray-50'}`}
-                        >
-                          <EditableText path={`navMainMenu.${idx}.label`} value={mainMenu.label} />
-                        </button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <nav className="hidden lg:flex items-center gap-8 text-[12px] font-medium tracking-[0.1em] uppercase whitespace-nowrap px-4">
-                  {config.navMainMenu?.map((mainMenu, mainIndex) => (
-                    <Link 
-                      key={mainMenu.id} 
-                      to={mainMenu.id === 'women' ? '/' : '/shop'} 
-                      onMouseEnter={() => setActiveMainMenuId(mainMenu.id)}
-                      className={`transition-colors ${activeMainMenuId === mainMenu.id ? 'text-gray-900 border-b border-black pb-0.5' : 'text-gray-500 hover:text-gray-900'}`}
-                    >
-                      <EditableText path={`navMainMenu.${mainIndex}.label`} value={mainMenu.label} />
-                    </Link>
-                  ))}
-                </nav>
-              </div>
-              
-              {/* Center: Logo */}
-              <div className="flex-shrink-0 px-2 md:px-4 flex justify-center flex-1">
-                <Link to="/" className="flex flex-col items-center group w-full">
-                  <motion.div 
-                    initial={{ opacity: 0, y: -20, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ 
-                      duration: 1.2, 
-                      ease: [0.16, 1, 0.3, 1],
-                      opacity: { duration: 0.8 }
-                    }}
-                    className="responsive-brand-title tracking-tighter md:tracking-[-0.05em] text-center uppercase whitespace-nowrap leading-none w-full" 
-                    style={{ fontFamily: '"Space Grotesk", sans-serif' }}
+              <nav className="hidden md:flex items-center gap-8 text-[12px] font-medium tracking-[0.1em] uppercase">
+                {config.navMainMenu?.map(mainMenu => (
+                  <Link 
+                    key={mainMenu.id} 
+                    to={mainMenu.id === 'women' ? '/' : '/shop'} 
+                    onMouseEnter={() => setActiveMainMenuId(mainMenu.id)}
+                    className={`transition-colors ${activeMainMenuId === mainMenu.id ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
                   >
-                    <span className="wave-text inline-block w-full">
-                      <EditableText path="brand.name" value={config.brand.name} />
-                    </span>
-                  </motion.div>
-                </Link>
+                    {mainMenu.label}
+                  </Link>
+                ))}
+              </nav>
+              
+            {/* Center: Logo */}
+            <Link to="/" className="flex flex-col items-center justify-center w-full group">
+              <div className="text-xl md:text-2xl tracking-[0.35em] text-center uppercase wave-text" style={{ fontFamily: '"Space Grotesk", sans-serif', fontWeight: 900 }}>
+                <EditableText path="brand.name" value={config.brand.name} />
               </div>
+            </Link>
 
               {/* Right: Actions */}
-              <div className="flex-1 flex items-center justify-end text-gray-800 relative h-full gap-2">
-                
-                {/* Desktop Action Icons */}
-                <div className="hidden lg:flex items-center gap-4 text-gray-500">
-                  {/* Avatar / Login */}
-                  <div 
-                    onClick={() => login()}
-                    className="cursor-pointer hover:opacity-80 hover:scale-110 transition-all font-bold tracking-widest text-[11px] uppercase flex items-center"
-                    title="Login"
-                  >
-                    <UploadableAvatar size={24} />
-                  </div>
-
-                  {/* Wishlist Icon */}
-                  <div 
-                    onClick={() => setIsWishlistOpen(true)}
-                    className="cursor-pointer hover:text-black hover:scale-110 transition-all relative"
-                    title="Wishlist"
-                  >
-                    <UploadableIcon iconId="wishlistNav" fallback={KissMark} size={20} strokeWidth={1} />
-                    {wishlist.length > 0 && (
-                      <span className="absolute -top-1 -right-2 bg-red-400 text-white text-[8px] w-3.5 h-3.5 flex items-center justify-center rounded-none font-bold">
-                        {wishlist.length}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Cart Icon */}
-                  <div 
-                    onClick={() => setIsCartOpen(true)}
-                    className="cursor-pointer hover:text-black hover:scale-110 transition-all relative"
-                    title="Cart"
-                  >
-                    <UploadableIcon iconId="cartNav" fallback={MultipleBags} size={20} strokeWidth={1} />
-                    {cart.length > 0 && (
-                      <span className="absolute -top-1 -right-2 bg-gray-400 text-white text-[8px] w-3.5 h-3.5 flex items-center justify-center rounded-none font-bold">
-                        {cart.reduce((acc, item) => acc + item.quantity, 0)}
-                      </span>
-                    )}
-                  </div>
-                  
-                  {/* Language Toggle Text (ENG/KR) */}
-                  <div 
-                    onClick={() => setLang(lang === 'KR' ? 'EN' : 'KR')}
-                    className="cursor-pointer hover:text-black hover:scale-110 transition-all"
-                    title="Change Language"
-                  >
-                    {lang === 'KR' 
-                      ? <UploadableIcon iconId="langKR" fallback={Globe} size={20} /> 
-                      : <UploadableIcon iconId="langEN" fallback={Globe} size={20} />
-                    }
-                  </div>
+              <div className="flex items-center justify-end gap-6 text-gray-800">
+                <div className="flex items-center gap-1 text-[11px] font-medium cursor-pointer uppercase tracking-widest text-gray-600">
+                  <span role="img" aria-label="KR">🇰🇷</span> KR
                 </div>
-
-                {/* Mobile Collapsible Action Menu */}
-                <div className="relative flex lg:hidden flex-col items-center group/nav-menu">
-                  <div 
-                    onClick={(e) => { 
-                      if (e.detail === 2) {
-                        login();
-                        setIsMenuOpen(false);
-                      } else {
-                        setIsMenuOpen(!isMenuOpen);
-                        setIsLeftMenuOpen(false);
-                      }
-                    }}
-                    className={`p-1.5 transition-all cursor-pointer flex items-center justify-center rounded-full ${isMenuOpen ? 'bg-white scale-110' : ''}`}
-                    title="Click for menu / Double-click for Login"
-                  >
-                    <UploadableAvatar size={32} className="transition-transform duration-500" />
+                {user ? (
+                  <div className="flex items-center gap-3">
+                     <Link to="/account" className="hidden md:inline text-[11px] uppercase tracking-widest font-medium text-gray-800 border-b border-black">{user.email?.split('@')[0]}</Link>
+                     <button onClick={logout} className="text-[11px] text-gray-400 hover:text-black uppercase tracking-widest transition-colors" title="Logout">로그아웃</button>
                   </div>
-                  
-                  <AnimatePresence>
-                    {isMenuOpen && (
-                      <motion.div 
-                        initial={{ opacity: 0, scale: 0.95, y: -5 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: -5 }}
-                        className="absolute top-full left-1/2 -translate-x-1/2 mt-1 flex flex-col w-[44px] z-[401] bg-white rounded-none border border-gray-100 shadow-sm"
-                        onClick={(e) => { e.stopPropagation(); }} // Prevent closing when clicking menu
-                      >
-                        <div className="w-full flex items-center justify-center py-2 cursor-pointer" onClick={(e) => { e.preventDefault(); setIsWishlistOpen(true); setIsMenuOpen(false); }}>
-                          <UploadableIcon iconId="wishlistNav" fallback={KissMark} size={20} className="text-gray-400" />
-                        </div>
-                        
-                        <div className="w-full flex items-center justify-center py-2 cursor-pointer" onClick={(e) => { e.preventDefault(); setIsCartOpen(true); setIsMenuOpen(false); }}>
-                          <UploadableIcon iconId="cartNav" fallback={MultipleBags} size={20} className="text-gray-400" />
-                        </div>
-                        
-                        <div className="w-full flex items-center justify-center py-2 cursor-pointer" onClick={() => { setLang(lang === 'KR' ? 'EN' : 'KR'); setIsMenuOpen(false); }}>
-                          {lang === 'KR' 
-                            ? <UploadableIcon iconId="langKR" fallback={Globe} size={20} /> 
-                            : <UploadableIcon iconId="langEN" fallback={Globe} size={20} />
-                          }
-                        </div>
-
-                        <div className="w-full py-2 flex flex-col items-center justify-center gap-1">
-                          <UploadableIcon iconId="searchNav" fallback={Search} size={20} className="text-gray-400 cursor-pointer" onClick={() => setIsSearchExpanded(!isSearchExpanded)} />
-                          {isSearchExpanded && (
-                             <input 
-                               type="text" 
-                               placeholder="SEARCH" 
-                               value={searchKeyword}
-                               onChange={(e) => setSearchKeyword(e.target.value)}
-                               className="w-full border-b border-gray-200 outline-none text-[8px] uppercase tracking-widest placeholder:text-gray-300 font-bold text-center pb-0.5"
-                               autoFocus
-                             />
-                          )}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                ) : (
+                  <button onClick={login} className="text-gray-800 hover:opacity-70 transition-opacity" title="Login">
+                    <UserIcon size={18} strokeWidth={1.2} />
+                  </button>
+                )}
+                <button onClick={() => setIsWishlistOpen(true)} className="text-gray-800 hover:opacity-70 transition-opacity relative">
+                  <Heart size={18} strokeWidth={1.2} />
+                  {wishlist.length > 0 && (
+                    <span className="absolute -top-1.5 -right-2 bg-[#2c2c2c] text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full">
+                      {wishlist.length}
+                    </span>
+                  )}
+                </button>
+                <button 
+                  onClick={() => setIsCartOpen(true)}
+                  className="text-gray-800 hover:opacity-70 transition-opacity relative"
+                >
+                  <ShoppingBag size={18} strokeWidth={1.2} />
+                  {cart.length > 0 && (
+                    <span className="absolute -top-1.5 -right-2 bg-[#2c2c2c] text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full">
+                      {cart.reduce((acc, item) => acc + item.quantity, 0)}
+                    </span>
+                  )}
+                </button>
               </div>
             </div>
 
-            {/* Bottom Section: Stacked Sub Navigation and Search */}
-            <div className="px-4 md:px-12 pb-6 flex flex-col items-center gap-4">
-              {/* Sub Navigation Bar - Centered */}
-              <nav className="flex items-center justify-center gap-4 md:gap-10 text-[11px] md:text-[12px] font-bold text-gray-500 hide-scrollbar whitespace-nowrap w-full py-2 border-t border-gray-50 relative">
-                
-                {/* Desktop Search at the start of sub categories */}
-                <div className="hidden lg:flex items-center -mr-2 group-search z-10 bg-white right-0">
-                  <div 
-                    onClick={() => setIsSearchExpanded(!isSearchExpanded)}
-                    className="cursor-pointer hover:text-black transition-colors flex items-center gap-2 p-1"
+            {/* Bottom Row: Sub Navigation & Search */}
+            <div className="px-4 md:px-12 pb-4 flex items-center justify-between">
+              <nav className="flex items-center gap-8 text-[12px] font-medium text-gray-600 overflow-x-auto no-scrollbar whitespace-nowrap hidden md:flex">
+                {config.navMainMenu?.find(m => m.id === activeMainMenuId)?.subCategories?.map((menu) => (
+                  <Link 
+                    key={menu.id} 
+                    to={`/shop?category=${encodeURIComponent(menu.label)}`} 
+                    className="hover:text-black transition-colors"
                   >
-                    <UploadableIcon iconId="searchNavDesktop" fallback={Search} size={14} className="text-gray-400 hover:text-black" />
-                  </div>
-                  <AnimatePresence>
-                    {isSearchExpanded && (
-                      <motion.div
-                        initial={{ width: 0, opacity: 0 }}
-                        animate={{ width: 140, opacity: 1 }}
-                        exit={{ width: 0, opacity: 0 }}
-                        className="overflow-hidden bg-white"
-                      >
-                        <input 
-                          type="text" 
-                          placeholder="Search..." 
-                          value={searchKeyword}
-                          onChange={(e) => setSearchKeyword(e.target.value)}
-                          className="w-full bg-transparent border-b border-gray-300 focus:border-black outline-none text-[10px] uppercase tracking-widest placeholder:text-gray-300 font-bold py-1 px-2 pb-1"
-                        />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                {config.navMainMenu?.find(m => m.id === activeMainMenuId)?.subCategories?.map((menu, subIndex) => {
-                  const mainIndex = config.navMainMenu?.findIndex(m => m.id === activeMainMenuId) ?? 0;
-                  return (
-                    <Link 
-                      key={menu.id} 
-                      to={`/shop?category=${encodeURIComponent(menu.label)}`} 
-                      className="hover:text-black transition-all hover:scale-110 uppercase tracking-[0.1em]"
-                    >
-                      <EditableText path={`navMainMenu.${mainIndex}.subCategories.${subIndex}.label`} value={menu.label} />
-                    </Link>
-                  );
-                })}
-                <Link to="/shop?sale=true" className="text-red-400 hover:text-red-600 transition-all hover:scale-110 uppercase tracking-[0.1em]">세일</Link>
+                     {menu.label}
+                  </Link>
+                ))}
+                <Link to="/shop?sale=true" className="text-red-400 hover:text-red-600 transition-colors">세일</Link>
               </nav>
+
+              {/* Search Bar */}
+              <div className="flex-grow md:flex-grow-0 md:w-64 border-b border-gray-200 focus-within:border-gray-500 transition-colors pb-1 flex items-center gap-2">
+                <Search size={14} className="text-gray-400" />
+                <input 
+                  type="text" 
+                  placeholder="검색" 
+                  className="bg-transparent border-none outline-none w-full text-[12px] placeholder:text-gray-400"
+                />
+              </div>
             </div>
           </header>
 
@@ -3440,7 +2658,7 @@ export default function App() {
             <Route path="/shop" element={<ShopPage user={user} config={config} />} />
             <Route path="/shop/:id" element={<ProductDetailPage config={config} user={user} />} />
             <Route path="/inventory" element={<InventoryPage />} />
-            <Route path="/account" element={<UserDashboardPage user={user} />} />
+            <Route path="/account" element={<AccountPage user={user} />} />
           </Routes>
 
           {/* Footer */}
@@ -3493,25 +2711,18 @@ export default function App() {
             </div>
 
             {/* Huge Brand Text */}
-            <div className="my-8 flex justify-center items-center w-full text-center px-0 sm:px-4 overflow-hidden">
-               <div 
-                className="leading-[0.8] tracking-[-0.02em] font-black uppercase select-none w-full flex justify-center items-center pb-4"
-                style={{ 
-                  fontFamily: '"Space Grotesk", "Outfit", sans-serif',
-                  fontSize: `min(22vw, calc(125vw / ${Math.max(6, config.brand.name?.length || 9)}))`
-                }}
+            <div className="my-8 flex justify-center items-center w-full text-center overflow-hidden px-2 md:px-0">
+              <div 
+                className="text-[19vw] md:text-[19vw] leading-[0.75] tracking-[-0.05em] font-black uppercase wave-text select-none w-full whitespace-nowrap opacity-95 pb-4 flex justify-center"
+                style={{ fontFamily: '"Space Grotesk", "Outfit", sans-serif' }}
               >
-                <EditableText 
-                  path="brand.name" 
-                  value={config.brand.name} 
-                  className="wave-text whitespace-nowrap truncate w-full text-center" 
-                />
+                <EditableText path="brand.name" value={config.brand.name} />
               </div>
             </div>
 
             <div className="flex flex-col md:flex-row justify-between items-center gap-8 border-t border-gray-100 pt-12">
               <div className="flex items-center gap-2 group">
-                <UploadableIcon iconId="tideLogo" fallback={TideLogo} size={30} />
+                <TideLogo />
                 <span className="text-[10px] font-bold tracking-widest uppercase">Mei Marea Selection</span>
               </div>
               
